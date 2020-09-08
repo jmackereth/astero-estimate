@@ -2,6 +2,20 @@ import numpy as np
 from asteroestimate.detections import probability as prob
 from scipy.stats import norm, multivariate_normal
 
+def _scatter_numax(mu, sigma_over_mu=0.01):
+    """
+    Add scatter to numax samples. Default is 1% of `mu`.
+    INPUT
+        mu - mean samples
+        sigma_over_mu - fractional uncertainty scatter to add
+    OUTPUT:
+        samples
+    HISTORY:
+        Written - Lyttle - 08/09/2020 (UoB @ online.tess.science)
+    """
+    sigma = sigma_over_mu * mu
+    return np.random.normal(mu, sigma)
+
 def numax_JHK(J, H, K, parallax, mass=1., AK=None, N_samples=1000):
     """
     Evaluate a prior on numax based on 2MASS magnitudes and Gaia parallax
@@ -15,6 +29,7 @@ def numax_JHK(J, H, K, parallax, mass=1., AK=None, N_samples=1000):
         samples - samples from the prior
     HISTORY:
         Written - Mackereth - 08/09/2020 (UoB @ online.tess.science)
+        Added scatter - Lyttle - 08/09/2020 (UoB @ online.tess.science)
     """
     means = np.array([J[0], H[0], K[0], parallax[0]])
     cov = np.zeros((4,4))
@@ -26,6 +41,7 @@ def numax_JHK(J, H, K, parallax, mass=1., AK=None, N_samples=1000):
     samples = multi_norm.rvs(size=N_samples)
     Jsamp, Hsamp, Ksamp, parallaxsamp = samples[:,0], samples[:,1], samples[:,2], samples[:,3]
     numaxsamp = prob.numax_from_JHK(Jsamp, Hsamp, Ksamp, parallaxsamp, mass=mass, AK=AK)
+    numaxsamp = _scatter_numax(numaxsamp)
     numax_mean = np.mean(numaxsamp)
     numax_sigma = np.std(numaxsamp)
     return (numax_mean, numax_sigma), numaxsamp
